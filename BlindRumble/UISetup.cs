@@ -33,11 +33,11 @@ namespace BlindRumble2
             category2.SetFilePath(Path.Combine(USER_DATA, CONFIG_FILE));
 
             enabledMod = category1.CreateEntry("enabledMod", true, "Enable Mod", "Enables the mod. Other settings wont work if this is disabled.");
-            enableInGym = category1.CreateEntry("enableInGym", false, "Enable In Gym", "Enables Blind Rumble within Gym. Defaults to false.");
-            enableInPark = category1.CreateEntry("enableInPark", true, "Enable In Park", "Enables Blind Rumble within Park. Defaults to true.");
-            enableInMatch = category1.CreateEntry("enableInMatch", true, "Enable In Match", "Enables Blind Rumble within a match. Defaults to true.");
-            MainColor = category2.CreateEntry("MainColor", "252, 216, 85, 1", "Main Color", "Color used for structures and players. Hex format (ex. #000000).");
-            SecondaryColor = category2.CreateEntry("SecondaryColor", "252, 216, 85, 1", "Secondary Color", "Color used for scene stuff. Hex format.");
+            enableInGym = category1.CreateEntry("enableInGym", false, "Enable In Gym", "Enables Blind Rumble within Gym. Defaults to false.", !enabledMod.Value);
+            enableInPark = category1.CreateEntry("enableInPark", true, "Enable In Park", "Enables Blind Rumble within Park. Defaults to true.", !enabledMod.Value);
+            enableInMatch = category1.CreateEntry("enableInMatch", true, "Enable In Match", "Enables Blind Rumble within a match. Defaults to true.", !enabledMod.Value);
+            MainColor = category2.CreateEntry("MainColor", "#fed44a", "Main Color", "Color used for structures and players. Hex format (ex. #ffffff).", !enabledMod.Value);
+            SecondaryColor = category2.CreateEntry("SecondaryColor", "#F8EF58", "Secondary Color", "Color used for scene stuff. Hex format.", !enabledMod.Value);
         }
 
         public static void SetPrefs()

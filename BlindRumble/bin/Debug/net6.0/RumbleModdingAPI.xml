@@ -11,7 +11,7 @@
         </member>
         <member name="E:RumbleModdingAPI.RMAPI.Actions.onModStringRecieved">
             <summary>
-            Runs when Mod String is recieved from another player. Spelling Error, will remove later. use onModStringRecieved
+            Runs when Mod String is received from another player
             </summary>
         </member>
         <member name="E:RumbleModdingAPI.RMAPI.Actions.onModStringReceived">

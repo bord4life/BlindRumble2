@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\johar\\source\\repos\\BlindRumble2\\BlindRumble2.csproj": {}
+    "C:\\Users\\johar\\source\\repos\\BlindRumble2\\BlindRumble\\BlindRumble2.csproj": {}
   },
   "projects": {
-    "C:\\Users\\johar\\source\\repos\\BlindRumble2\\BlindRumble2.csproj": {
+    "C:\\Users\\johar\\source\\repos\\BlindRumble2\\BlindRumble\\BlindRumble2.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\johar\\source\\repos\\BlindRumble2\\BlindRumble2.csproj",
+        "projectUniqueName": "C:\\Users\\johar\\source\\repos\\BlindRumble2\\BlindRumble\\BlindRumble2.csproj",
         "projectName": "BlindRumble2",
-        "projectPath": "C:\\Users\\johar\\source\\repos\\BlindRumble2\\BlindRumble2.csproj",
+        "projectPath": "C:\\Users\\johar\\source\\repos\\BlindRumble2\\BlindRumble\\BlindRumble2.csproj",
         "packagesPath": "C:\\Users\\johar\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\johar\\source\\repos\\BlindRumble2\\obj\\",
+        "outputPath": "C:\\Users\\johar\\source\\repos\\BlindRumble2\\BlindRumble\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\johar\\AppData\\Roaming\\NuGet\\NuGet.Config",
