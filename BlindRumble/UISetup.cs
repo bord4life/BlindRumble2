@@ -1,5 +1,6 @@
 ﻿using MelonLoader;
 using UnityEngine;
+using System.Globalization;
 using static BlindRumble2.Core;
 
 namespace BlindRumble2
@@ -37,7 +38,7 @@ namespace BlindRumble2
             enableInPark = category1.CreateEntry("enableInPark", true, "Enable In Park", "Enables Blind Rumble within Park. Defaults to true.", !enabledMod.Value);
             enableInMatch = category1.CreateEntry("enableInMatch", true, "Enable In Match", "Enables Blind Rumble within a match. Defaults to true.", !enabledMod.Value);
             MainColor = category2.CreateEntry("MainColor", "#fed44a", "Main Color", "Color used for structures and players. Hex format (ex. #ffffff).", !enabledMod.Value);
-            SecondaryColor = category2.CreateEntry("SecondaryColor", "#F8EF58", "Secondary Color", "Color used for scene stuff. Hex format.", !enabledMod.Value);
+            SecondaryColor = category2.CreateEntry("SecondaryColor", "#31966B", "Secondary Color", "Color used for scene stuff. Hex format.", !enabledMod.Value);
         }
 
         public static void SetPrefs()
@@ -46,8 +47,25 @@ namespace BlindRumble2
             EIGym = enableInGym.Value;
             EIPark = enableInPark.Value;
             EIMatch = enableInMatch.Value;
-            if (!ColorUtility.TryParseHtmlString(MainColor.Value, out MainSonar)) loggerInstance.Error("Main Color did not save!");
-            if (!ColorUtility.TryParseHtmlString(SecondaryColor.Value, out SecondarySonar)) loggerInstance.Error("Secondary Color did not save!");
+            if (!HexToColor(MainColor.Value, out MainSonar)) loggerInstance.Error("Main Color did not save!\nCauses are improper syntax or wrong format.");
+            if (!HexToColor(SecondaryColor.Value, out SecondarySonar)) loggerInstance.Error("Secondary Color did not save!\nCauses are improper syntax or wrong format.");
+        }
+
+        private static bool HexToColor(string hex, out Color color)
+        {
+            if (hex.StartsWith("#")) hex = hex.Substring(1);
+            if (hex.Length != 6)
+            {
+                color = Color.black;
+                return false;
+            }
+
+            byte r = byte.Parse(hex.Substring(0, 2), NumberStyles.HexNumber);
+            byte g = byte.Parse(hex.Substring(2, 2), NumberStyles.HexNumber);
+            byte b = byte.Parse(hex.Substring(4, 2), NumberStyles.HexNumber);
+
+            color = new Color32(r, g, b, 255);
+            return true;
         }
     }
 }

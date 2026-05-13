@@ -381,17 +381,17 @@ namespace BlindRumble2
                 foreach (MeshRenderer mesh in inter.GetComponentsInChildren<MeshRenderer>())
                 {
                     mesh.material = sonarMaterial;
-                    mesh.material.color = new(51, 204, 255, 255);
+                    mesh.material.color = new Color32(51, 204, 255, 255);
                 }
                 foreach (LineRenderer line in inter.GetComponentsInChildren<LineRenderer>())
                 {
                     line.material = sonarMaterial;
-                    line.material.color = new(51, 204, 255, 255);
+                    line.material.color = new Color32(51, 204, 255, 255);
                 }
                 foreach (TextMeshPro tmp in inter.GetComponentsInChildren<TextMeshPro>())
                 {
                     tmp.material = sonarMaterial;
-                    tmp.material.color = new(51, 204, 255, 255);
+                    tmp.material.color = new Color32(51, 204, 255, 255);
                 }
 
                 inter.active = true;
