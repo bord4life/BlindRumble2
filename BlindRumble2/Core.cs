@@ -138,10 +138,11 @@ namespace BlindRumble2
             sonarMaterial = new Material(Shader.Find("Shader Graphs/Pose Ghost Shader"))
             {
                 hideFlags = HideFlags.DontUnloadUnusedAsset,
-                color = new Color(0, 0, 0, 0)
+                color = new(0, 0, 0, 0)
             };
 
             IsShaderFound = true;
+            loggerInstance.Msg(SecondarySonar);
         }
 
         //public static void RumbleEvenDarkerMode()
@@ -152,6 +153,8 @@ namespace BlindRumble2
         public static IEnumerator SonarifyScene()
         {
             // Makes everything have sonar shader
+            loggerInstance.Msg(SecondarySonar + " sonaring");
+            sonarMaterial.color = SecondarySonar;
             if (CurrentSceneName == "Gym") // sonars gym
             {
                 while (!IsShaderFound)
@@ -160,8 +163,7 @@ namespace BlindRumble2
                 }
                 foreach (Renderer rend in GameObjects.Gym.SCENE.GYM.GetGameObject().GetComponentsInChildren<Renderer>(true)) // remeber to change these to supercopia's thing
                 {
-                    rend.material = sonarMaterial;
-                    rend.material.color = SecondarySonar;
+                    rend.material = sonarMaterial; 
                 }
                 GameObjects.Gym.SCENE.GYMVista.GetGameObject().active = false;
                 GameObjects.Gym.SCENE.GYMWater.GetGameObject().GetComponent<MeshRenderer>().material = sonarMaterial;
@@ -197,7 +199,6 @@ namespace BlindRumble2
                 foreach (Renderer rend in GameObjects.Park.SCENE.PARK.GetGameObject().GetComponentsInChildren<Renderer>(true))
                 {
                     rend.material = sonarMaterial;
-                    rend.material.color = SecondarySonar;
                 }
 
 
@@ -213,7 +214,6 @@ namespace BlindRumble2
                     foreach (Renderer rend in GameObjects.Map0.Scene.Map0.GetGameObject().GetComponentsInChildren<Renderer>(true))
                     {
                         rend.material = sonarMaterial;
-                        rend.material.color = SecondarySonar;
                     }
                 }
                 else if (CurrentSceneName == "Map1") // sonars pit
@@ -221,7 +221,6 @@ namespace BlindRumble2
                     foreach (Renderer rend in GameObjects.Map1.Scene.MAP1.GetGameObject().GetComponentsInChildren<Renderer>(true))
                     {
                         rend.material = sonarMaterial;
-                        rend.material.color = SecondarySonar;
                     }
                 }
 
@@ -310,10 +309,11 @@ namespace BlindRumble2
             iHaveWayTooManyVariables = true;
         }
 
-        public static IEnumerator ScaleClone(Transform clone, Vector3 newScale, float length)
+        public static IEnumerator ScaleClone(Transform clone, Vector3 newScale, float length, bool startFrom0)
         {
             float elapsed = 0f;
             Vector3 originalScale = clone.localScale;
+            if (startFrom0) originalScale = Vector3.zero;
 
             while (elapsed < length)
             {
@@ -396,6 +396,7 @@ namespace BlindRumble2
                 }
 
                 inter.active = true;
+                ScaleClone(inter.transform, inter.transform.localScale, 0.05f, true);
             }
         }
 

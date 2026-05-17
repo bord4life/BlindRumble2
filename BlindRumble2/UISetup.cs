@@ -50,7 +50,7 @@ namespace BlindRumble2
             if (!HexToColor(MainColor.Value, out MainSonar)) loggerInstance.Error("Main Color did not save!\nCauses are improper syntax or wrong format.");
             if (!HexToColor(SecondaryColor.Value, out SecondarySonar)) loggerInstance.Error("Secondary Color did not save!\nCauses are improper syntax or wrong format.");
 
-            MelonCoroutines.Start(SonarifyScene());
+            if (CurrentSceneName != "Loader") MelonCoroutines.Start(SonarifyScene());
         }
 
         private static bool HexToColor(string hex, out Color color)
