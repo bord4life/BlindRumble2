@@ -2,3 +2,7 @@
 /.vs
 BlindRumble2/GlobalSuppressions.cs
 .editorconfig
+
+# Build output
+bin/
+obj/
