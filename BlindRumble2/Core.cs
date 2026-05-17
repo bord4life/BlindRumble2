@@ -136,9 +136,9 @@ namespace BlindRumble2
         {
             sonarMaterial = new Material(Shader.Find("Shader Graphs/Pose Ghost Shader"))
             {
-                hideFlags = HideFlags.DontUnloadUnusedAsset,
-                color = new(0, 0, 0, 0)
+                hideFlags = HideFlags.DontUnloadUnusedAsset
             };
+            sonarMaterial.SetColor("_Base_color", new Color(0, 0, 0, 0));
 
             IsShaderFound = true;
             loggerInstance.Msg(SecondarySonar);
@@ -162,7 +162,7 @@ namespace BlindRumble2
                 }
                 foreach (Renderer rend in GameObjects.Gym.SCENE.GYM.GetGameObject().GetComponentsInChildren<Renderer>(true)) // remeber to change these to supercopia's thing
                 {
-                    rend.material = sonarMaterial; 
+                    sonarMaterial.SetColor("_Base_color", SecondarySonar);
                 }
                 GameObjects.Gym.SCENE.GYMVista.GetGameObject().active = false;
                 GameObjects.Gym.SCENE.GYMWater.GetGameObject().GetComponent<MeshRenderer>().material = sonarMaterial;
@@ -250,16 +250,16 @@ namespace BlindRumble2
                 }
 
                 Transform cloneVisuals = GameObject.Instantiate(player.PlayerVisuals.gameObject, clones).transform;
-                
+
                 foreach (Behaviour component in cloneVisuals.GetComponents<Behaviour>())
                 {
                     component.enabled = false;
                 }
 
-                SkinnedMeshRenderer renderer = cloneVisuals.GetComponent<SkinnedMeshRenderer>();  
+                SkinnedMeshRenderer renderer = cloneVisuals.GetComponent<SkinnedMeshRenderer>();
                 renderer.material = sonarMaterial;
                 renderer.material.color = MainSonar;
-                
+
                 if (!poseTrigger)
                 {
                     yield return new WaitForSeconds(1.45f);

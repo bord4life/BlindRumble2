@@ -7,7 +7,7 @@ namespace BlindRumble2
 {
     public class UISetup
     {
-        internal const string USER_DATA = "UserData/BlindRumble/";
+        internal const string USER_DATA = "UserData/BlindRumble2/";
         internal const string CONFIG_FILE = "config.cfg";
 
         internal static MelonPreferences_Category category1;
@@ -21,16 +21,20 @@ namespace BlindRumble2
 
         public static void LoadPrefs()
         {
+            if (!Directory.Exists("UserData/BlindRumble/"))
+            {
+                Directory.Delete("UserData/BlindRumble/");
+            }
             if (!Directory.Exists(USER_DATA))
             {
                 Directory.CreateDirectory(USER_DATA);
             }
                 
 
-            category1 = MelonPreferences.CreateCategory("Main");
+            category1 = MelonPreferences.CreateCategory("BlindRumbleMain");
             category1.SetFilePath(Path.Combine(USER_DATA, CONFIG_FILE));
 
-            category2 = MelonPreferences.CreateCategory("Colors");
+            category2 = MelonPreferences.CreateCategory("BLindRumbleColors");
             category2.SetFilePath(Path.Combine(USER_DATA, CONFIG_FILE));
 
             enabledMod = category1.CreateEntry("enabledMod", true, "Enable Mod", "Enables the mod. Other settings wont work if this is disabled.");
