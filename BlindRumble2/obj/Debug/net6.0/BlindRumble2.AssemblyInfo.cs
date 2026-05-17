@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("BlindRumble2")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+8ca18f3f8715c9301ec6851d956c9a5c47cc888e")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+d5d055d95cd6ae821a680e2b7551ab53b475ea9b")]
 [assembly: System.Reflection.AssemblyProductAttribute("BlindRumble2")]
 [assembly: System.Reflection.AssemblyTitleAttribute("BlindRumble2")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

@@ -265,7 +265,7 @@ namespace BlindRumble2
                 {
                     yield return new WaitForSeconds(1.45f);
 
-                    MelonCoroutines.Start(ScaleClone(player.transform, Vector3.zero, 0.05f));
+                    MelonCoroutines.Start(ScaleClone(player.transform, Vector3.zero, 0.05f, false));
                 }
                 else
                 {
@@ -396,7 +396,7 @@ namespace BlindRumble2
                 }
 
                 inter.active = true;
-                ScaleClone(inter.transform, inter.transform.localScale, 0.05f, true);
+                MelonCoroutines.Start(ScaleClone(inter.transform, inter.transform.localScale, 0.05f, true));
             }
         }
 
