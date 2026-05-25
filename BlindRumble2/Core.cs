@@ -1,4 +1,4 @@
-﻿using Il2CppPhoton.Pun;
+using Il2CppPhoton.Pun;
 using Il2CppRUMBLE.Managers;
 using Il2CppRUMBLE.MoveSystem;
 using Il2CppRUMBLE.Players;
@@ -13,13 +13,14 @@ using Unity.Hierarchy;
 using UnityEngine;
 using UnityEngine.InputSystem.HID;
 
+#region MelonInfo
 [assembly: MelonInfo(typeof(BlindRumble2.Core), BlindRumble2.BuildInfo.ModName, BlindRumble2.BuildInfo.ModVersion, BlindRumble2.BuildInfo.Author)]
 [assembly: MelonGame("Buckethead Entertainment", "RUMBLE")]
 [assembly: MelonColor(255, 140, 40, 220)]
 [assembly: MelonAuthorColor(255, 140, 40, 220)]
 [assembly: VerifyLoaderVersion(0, 7, 2, true)]
 [assembly: MelonAdditionalDependencies("UIFramework")]
-
+#endregion
 
 namespace BlindRumble2
 {
@@ -45,6 +46,8 @@ namespace BlindRumble2
         public static GameObject dummyHealthbar;
         public static GameObject playerHealth;
         public static int dummyHealth = 20;
+        public static float timer;
+        public static List<GameObject> processedVisuals = new();
         public static bool iHaveWayTooManyVariables = false;
 
         #endregion
@@ -55,6 +58,7 @@ namespace BlindRumble2
             CurrentSceneName = sceneName;
 
             iHaveWayTooManyVariables = false;
+            processedVisuals.Clear();
 
             if (CurrentSceneName == "Loader")
             {
@@ -117,7 +121,6 @@ namespace BlindRumble2
 
         public override void OnUpdate()
         {
-            float timer = 0f;
             timer += Time.deltaTime;
             if (timer >= 0.5f)
             {
@@ -138,31 +141,33 @@ namespace BlindRumble2
             {
                 hideFlags = HideFlags.DontUnloadUnusedAsset
             };
-            sonarMaterial.SetColor("_Base_color", new Color(0, 0, 0, 0));
+
+            // Log all shader properties so we know what to target
+            Shader shader = sonarMaterial.shader;
+            for (int i = 0; i < shader.GetPropertyCount(); i++)
+            {
+                loggerInstance.Msg($"[Shader] {shader.GetPropertyType(i)} : {shader.GetPropertyName(i)}");
+            }
+
+            SetShaderColor(sonarMaterial, new Color(0, 0, 0, 0));
 
             IsShaderFound = true;
             loggerInstance.Msg(SecondarySonar);
         }
 
-        //public static void RumbleEvenDarkerMode()
-        //{
-        //    MelonMod.FindMelon("Rumble Dark Mode", "ERROR").Unregister();
-        //}
-
         public static IEnumerator SonarifyScene()
         {
-            // Makes everything have sonar shader
             loggerInstance.Msg(SecondarySonar + " sonaring");
             sonarMaterial.color = SecondarySonar;
-            if (CurrentSceneName == "Gym") // sonars gym
+            if (CurrentSceneName == "Gym")
             {
                 while (!IsShaderFound)
                 {
                     yield return null;
                 }
-                foreach (Renderer rend in GameObjects.Gym.SCENE.GYM.GetGameObject().GetComponentsInChildren<Renderer>(true)) // remeber to change these to supercopia's thing
+                foreach (Renderer rend in GameObjects.Gym.SCENE.GYM.GetGameObject().GetComponentsInChildren<Renderer>(true))
                 {
-                    sonarMaterial.SetColor("_Base_color", SecondarySonar);
+                    SetShaderColor(sonarMaterial, SecondarySonar);
                 }
                 GameObjects.Gym.SCENE.GYMVista.GetGameObject().active = false;
                 GameObjects.Gym.SCENE.GYMWater.GetGameObject().GetComponent<MeshRenderer>().material = sonarMaterial;
@@ -189,7 +194,7 @@ namespace BlindRumble2
                 GameObjects.Gym.INTERACTABLES.Telephone20REDUXspecialedition.GetGameObject().active = false;
                 GameObjects.Gym.INTERACTABLES.Toys.GetGameObject().active = false;
             }
-            if (CurrentSceneName == "Park") // sonars park
+            if (CurrentSceneName == "Park")
             {
                 while (!IsShaderFound)
                 {
@@ -199,8 +204,6 @@ namespace BlindRumble2
                 {
                     rend.material = sonarMaterial;
                 }
-
-
             }
             if (CurrentSceneName.Contains("Map"))
             {
@@ -208,31 +211,33 @@ namespace BlindRumble2
                 {
                     yield return null;
                 }
-                if (CurrentSceneName == "Map0") // sonars ring
+                if (CurrentSceneName == "Map0")
                 {
                     foreach (Renderer rend in GameObjects.Map0.Scene.Map0.GetGameObject().GetComponentsInChildren<Renderer>(true))
                     {
                         rend.material = sonarMaterial;
                     }
                 }
-                else if (CurrentSceneName == "Map1") // sonars pit
+                else if (CurrentSceneName == "Map1")
                 {
                     foreach (Renderer rend in GameObjects.Map1.Scene.MAP1.GetGameObject().GetComponentsInChildren<Renderer>(true))
                     {
                         rend.material = sonarMaterial;
                     }
                 }
-
             }
         }
 
-        public static void ConstantSnapshot()
+        public static void SetShaderColor(Material material, Color color)
         {
-            if (modEnabled == false)
+            Shader shader = material.shader;
+            for (int i = 0; i < shader.GetPropertyCount(); i++)
             {
-                return;
+                if (shader.GetPropertyType(i) == UnityEngine.Rendering.ShaderPropertyType.Color)
+                {
+                    material.SetColor(shader.GetPropertyName(i), color);
+                }
             }
-
         }
 
         public static IEnumerator CreateSnapshot(bool isItStructure, bool poseTrigger, PlayerController player = null, Structure structure = null)
@@ -243,7 +248,6 @@ namespace BlindRumble2
             }
             if (isItStructure == false)
             {
-                //Creates a temporary image of where the player used to be when a sound happened nearby.
                 foreach (Behaviour component in player.GetComponents<Behaviour>())
                 {
                     component.enabled = false;
@@ -257,18 +261,13 @@ namespace BlindRumble2
                 }
 
                 SkinnedMeshRenderer renderer = cloneVisuals.GetComponent<SkinnedMeshRenderer>();
-                renderer.material = sonarMaterial;
-                renderer.material.color = MainSonar;
+                renderer.material = new Material(sonarMaterial);
+                SetShaderColor(renderer.material, MainSonar);
 
                 if (!poseTrigger)
                 {
                     yield return new WaitForSeconds(1.45f);
-
                     MelonCoroutines.Start(ScaleClone(player.transform, Vector3.zero, 0.05f, false));
-                }
-                else
-                {
-
                 }
 
                 GameObject.Destroy(cloneVisuals);
@@ -290,14 +289,14 @@ namespace BlindRumble2
                 Structure.GetComponent<Rigidbody>().isKinematic = true;
                 Structure.GetComponent<Collider>().enabled = false;
 
-                structureVisuals.material = sonarMaterial;
-                structureVisuals.material.color = MainSonar;
+                structureVisuals.material = new Material(sonarMaterial);
+                SetShaderColor(structureVisuals.material, MainSonar);
             }
         }
 
         public static IEnumerator BewareOfThePreloadedStructures()
         {
-            float length = 3.14159269535897932384626433f;
+            float length = (float)Math.PI;
             float elapsed = 0f;
             while (elapsed < length)
             {
@@ -321,6 +320,8 @@ namespace BlindRumble2
                 clone.localScale = Vector3.Lerp(originalScale, newScale, t);
                 yield return null;
             }
+
+            if (clone.localScale == Vector3.zero) clone.gameObject.active = false;
         }
 
         public static IEnumerator CreateOppHealthbar()
@@ -351,52 +352,72 @@ namespace BlindRumble2
                 dummyHealthbar.name = "EnemyHealthbar";
 
                 playerHealth = Calls.Players.GetLocalPlayerController().PlayerUI.localUIBar.gameObject;
-
             }
         }
 
         public static void PopIn()
         {
+            PopOut();
+
             Vector3 pos = PlayerManager.instance.localPlayer.Controller.transform.position;
 
-            Collider[] possibleInteractibles = Physics.OverlapSphere(pos, 6);
             List<GameObject> Interactibles = new();
 
-            foreach (Collider col in possibleInteractibles)
+            foreach (GameObject root in new[] { GameObjects.Gym.INTERACTABLES.GetGameObject(), GameObjects.Park.INTERACTABLES.GetGameObject() })
             {
-                GameObject current = col.gameObject;
-                while (current != null)
+                if (root == null) continue;
+                for (int i = 0; i < root.transform.childCount; i++)
                 {
-                    if (current == GameObjects.Gym.INTERACTABLES.GetGameObject() || current == GameObjects.Park.INTERACTABLES.GetGameObject())
+                    Transform child = root.transform.GetChild(i);
+                    if (Vector3.Distance(child.position, pos) <= 4f && !processedVisuals.Contains(child.gameObject))
                     {
-                        Interactibles.Add(col.gameObject);
-                        break;
+                        Interactibles.Add(child.gameObject);
                     }
-                    current = current.transform.parent.gameObject;
                 }
             }
+            processedVisuals.RemoveAll(obj => obj == null || Vector3.Distance(obj.transform.position, pos) > 4f);
+
+            if (Interactibles.Count == 0) return;
 
             foreach (GameObject inter in Interactibles)
             {
-                foreach (MeshRenderer mesh in inter.GetComponentsInChildren<MeshRenderer>())
+                foreach (MeshRenderer mesh in inter.GetComponentsInChildren<MeshRenderer>(true))
                 {
-                    mesh.material = sonarMaterial;
-                    mesh.material.color = new Color32(51, 204, 255, 255);
+                    mesh.material = new Material(sonarMaterial);
+                    SetShaderColor(mesh.material, new Color32(51, 204, 255, 255));
                 }
-                foreach (LineRenderer line in inter.GetComponentsInChildren<LineRenderer>())
+                foreach (LineRenderer line in inter.GetComponentsInChildren<LineRenderer>(true))
                 {
-                    line.material = sonarMaterial;
-                    line.material.color = new Color32(51, 204, 255, 255);
+                    line.material = new Material(sonarMaterial);
+                    SetShaderColor(line.material, new Color32(51, 204, 255, 255));
                 }
-                foreach (TextMeshPro tmp in inter.GetComponentsInChildren<TextMeshPro>())
+                foreach (TextMeshPro tmp in inter.GetComponentsInChildren<TextMeshPro>(true))
                 {
-                    tmp.material = sonarMaterial;
-                    tmp.material.color = new Color32(51, 204, 255, 255);
+                    tmp.color = new Color(0.5f, 0.5f, 0.5f, 1f);
                 }
-
+                foreach (TextMeshProUGUI tmp in inter.GetComponentsInChildren<TextMeshProUGUI>(true))
+                {
+                    tmp.color = new Color(0.5f, 0.5f, 0.5f, 1f);
+                }
+                processedVisuals.Add(inter);
                 inter.active = true;
                 MelonCoroutines.Start(ScaleClone(inter.transform, inter.transform.localScale, 0.05f, true));
             }
+        }
+
+        public static void PopOut()
+        {
+            Vector3 pos = PlayerManager.instance.localPlayer.Controller.transform.position;
+
+            processedVisuals.RemoveAll(inter =>
+            {
+                if (Vector3.Distance(inter.transform.position, pos) > 4f)
+                {
+                    if (inter != null) MelonCoroutines.Start(ScaleClone(inter.transform, Vector3.zero, 0.05f, false));
+                    return true;
+                }
+                return false;
+            });
         }
 
         #endregion

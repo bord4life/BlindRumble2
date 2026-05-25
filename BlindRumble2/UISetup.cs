@@ -21,7 +21,7 @@ namespace BlindRumble2
 
         public static void LoadPrefs()
         {
-            if (!Directory.Exists("UserData/BlindRumble/"))
+            if (Directory.Exists("UserData/BlindRumble/"))
             {
                 Directory.Delete("UserData/BlindRumble/");
             }

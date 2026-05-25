@@ -1,6 +1,3 @@
 <Solution>
-  <Folder Name="/Solution Items/">
-    <File Path=".editorconfig" />
-  </Folder>
-  <Project Path="BlindRumble/BlindRumble2.csproj" />
+  <Project Path="BlindRumble2/BlindRumble2.csproj" />
 </Solution>
