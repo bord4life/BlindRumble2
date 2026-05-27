@@ -8,6 +8,7 @@ using Il2CppTMPro;
 using MelonLoader;
 using RumbleModdingAPI.RMAPI;
 using System.Collections;
+using System.Runtime.CompilerServices;
 using UIFramework;
 using Unity.Hierarchy;
 using UnityEngine;
@@ -21,7 +22,7 @@ using UnityEngine.InputSystem.HID;
 [assembly: VerifyLoaderVersion(0, 7, 2, true)]
 [assembly: MelonAdditionalDependencies("UIFramework")]
 #endregion
-
+// IMPORTANT add option to reload every pulse
 namespace BlindRumble2
 {
     public class Core : MelonMod
@@ -84,7 +85,7 @@ namespace BlindRumble2
             loggerInstance = LoggerInstance;
             UISetup.LoadPrefs();
             UISetup.SetPrefs();
-            UI.Register((MelonBase)this, UISetup.category1, UISetup.category2).OnModSaved += UISetup.SetPrefs;
+            UI.RegisterMelon((MelonBase)this, UISetup.category1, UISetup.category2).OnModSaved += UISetup.SetPrefs;
         }
 
         public override void OnLateInitializeMelon()
@@ -124,11 +125,9 @@ namespace BlindRumble2
             timer += Time.deltaTime;
             if (timer >= 0.5f)
             {
+                LoggerInstance.Msg("WEE WOO WEE WOO WE ARE UPDATING");
                 timer = 0f;
-                if (CurrentSceneName == "Gym" || CurrentSceneName == "Park")
-                {
-                    PopIn();
-                }
+                PopIn();
             }
         }
 
@@ -137,41 +136,40 @@ namespace BlindRumble2
         #region Sonar stuff
         public static void GetSonarShader()
         {
-            sonarMaterial = new Material(Shader.Find("Shader Graphs/Pose Ghost Shader"))
-            {
-                hideFlags = HideFlags.DontUnloadUnusedAsset
-            };
+            Shader shader = AssetBundles.LoadAssetFromStream<Shader>(instance, "BlindRumble2.Shader.poseghostshader", "Ghost");
+            sonarMaterial = new(shader);
+            sonarMaterial.hideFlags = sonarMaterial.hideFlags = HideFlags.HideAndDontSave | HideFlags.DontUnloadUnusedAsset;
 
-            // Log all shader properties so we know what to target
-            Shader shader = sonarMaterial.shader;
             for (int i = 0; i < shader.GetPropertyCount(); i++)
             {
                 loggerInstance.Msg($"[Shader] {shader.GetPropertyType(i)} : {shader.GetPropertyName(i)}");
             }
 
-            SetShaderColor(sonarMaterial, new Color(0, 0, 0, 0));
-
-            IsShaderFound = true;
+            if (sonarMaterial == null) return;
+            else IsShaderFound = true;
             loggerInstance.Msg(SecondarySonar);
         }
 
         public static IEnumerator SonarifyScene()
         {
-            loggerInstance.Msg(SecondarySonar + " sonaring");
-            sonarMaterial.color = SecondarySonar;
+            if (sonarMaterial == null)
+            {
+                loggerInstance.Error("[SonarifyScene] sonarMaterial is null, aborting.");
+                yield break;
+            }
+
             if (CurrentSceneName == "Gym")
             {
-                while (!IsShaderFound)
-                {
-                    yield return null;
-                }
                 foreach (Renderer rend in GameObjects.Gym.SCENE.GYM.GetGameObject().GetComponentsInChildren<Renderer>(true))
                 {
-                    SetShaderColor(sonarMaterial, SecondarySonar);
+                    rend.material = sonarMaterial;
+                    SetShaderColor(rend.material, SecondarySonar);
                 }
                 GameObjects.Gym.SCENE.GYMVista.GetGameObject().active = false;
                 GameObjects.Gym.SCENE.GYMWater.GetGameObject().GetComponent<MeshRenderer>().material = sonarMaterial;
-                GameObjects.Gym.SCENE.GYMWater.GetGameObject().GetComponent<MeshRenderer>().material.color = new(0, 255, 239, 1);
+                SetShaderColor(GameObjects.Gym.SCENE.GYMWater.GetGameObject().GetComponent<MeshRenderer>().material, new Color32(0, 255, 239, 1));
+                GameObjects.Gym.SCENE.GYMMoss.GetGameObject().GetComponent<MeshRenderer>().material = sonarMaterial;
+                SetShaderColor(GameObjects.Gym.SCENE.GYMMoss.GetGameObject().GetComponent<MeshRenderer>().material, new Color32(138, 154, 91, 255));
 
                 GameObjects.Gym.INTERACTABLES.Bag.GetGameObject().active = false;
                 GameObjects.Gym.INTERACTABLES.BeltRack.GetGameObject().active = false;
@@ -193,24 +191,33 @@ namespace BlindRumble2
                 GameObjects.Gym.INTERACTABLES.Shiftstones.GetGameObject().active = false;
                 GameObjects.Gym.INTERACTABLES.Telephone20REDUXspecialedition.GetGameObject().active = false;
                 GameObjects.Gym.INTERACTABLES.Toys.GetGameObject().active = false;
+
+                GameObjects.DDOL.GameInstance.PreInitializable.PoolManager.PoolFruitFatRUMBLEEnvironmentFruit.GetGameObject().active = false;
+                GameObjects.DDOL.GameInstance.PreInitializable.PoolManager.PoolFruitLongRUMBLEEnvironmentFruit.GetGameObject().active = false;
+                GameObjects.DDOL.GameInstance.PreInitializable.PoolManager.PoolFruitRUMBLEEnvironmentFruit.GetGameObject().active = false;
             }
             if (CurrentSceneName == "Park")
             {
-                while (!IsShaderFound)
-                {
-                    yield return null;
-                }
                 foreach (Renderer rend in GameObjects.Park.SCENE.PARK.GetGameObject().GetComponentsInChildren<Renderer>(true))
                 {
                     rend.material = sonarMaterial;
+                    SetShaderColor(rend.material, SecondarySonar);
                 }
+
+                GameObjects.Park.INTERACTABLES.Fruit.GetGameObject().active = false;
+                GameObjects.Park.INTERACTABLES.Gondola.GetGameObject().active = false;
+                GameObjects.Park.INTERACTABLES.Notifications.GetGameObject().active = false;
+                GameObjects.Park.INTERACTABLES.ParkboardPark.GetGameObject().active = false;
+                GameObjects.Park.INTERACTABLES.Shiftstones.GetGameObject().active = false;
+                GameObjects.Park.INTERACTABLES.Telephone20REDUXspecialedition.GetGameObject().active = false;
+                GameObjects.Park.INTERACTABLES.Toys.GetGameObject().active = false;
+
+                GameObjects.DDOL.GameInstance.PreInitializable.PoolManager.PoolFruitFatRUMBLEEnvironmentFruit.GetGameObject().active = false;
+                GameObjects.DDOL.GameInstance.PreInitializable.PoolManager.PoolFruitLongRUMBLEEnvironmentFruit.GetGameObject().active = false;
+                GameObjects.DDOL.GameInstance.PreInitializable.PoolManager.PoolFruitRUMBLEEnvironmentFruit.GetGameObject().active = false;
             }
             if (CurrentSceneName.Contains("Map"))
             {
-                while (!IsShaderFound)
-                {
-                    yield return null;
-                }
                 if (CurrentSceneName == "Map0")
                 {
                     foreach (Renderer rend in GameObjects.Map0.Scene.Map0.GetGameObject().GetComponentsInChildren<Renderer>(true))
@@ -230,18 +237,24 @@ namespace BlindRumble2
 
         public static void SetShaderColor(Material material, Color color)
         {
+            if (material == null) return;
+
             Shader shader = material.shader;
+            material.color = color;
+
             for (int i = 0; i < shader.GetPropertyCount(); i++)
             {
                 if (shader.GetPropertyType(i) == UnityEngine.Rendering.ShaderPropertyType.Color)
                 {
-                    material.SetColor(shader.GetPropertyName(i), color);
+                    material.SetColor(i, color);
                 }
             }
         }
 
         public static IEnumerator CreateSnapshot(bool isItStructure, bool poseTrigger, PlayerController player = null, Structure structure = null)
         {
+            if (sonarMaterial == null) yield break;
+
             if (player == Calls.Players.GetLocalPlayerController())
             {
                 yield break;
@@ -369,22 +382,30 @@ namespace BlindRumble2
                 for (int i = 0; i < root.transform.childCount; i++)
                 {
                     Transform child = root.transform.GetChild(i);
-                    if (Vector3.Distance(child.position, pos) <= 4f && !processedVisuals.Contains(child.gameObject))
+                    if (Vector3.Distance(child.position, pos) <= 4f)
                     {
                         Interactibles.Add(child.gameObject);
                     }
                 }
             }
-            processedVisuals.RemoveAll(obj => obj == null || Vector3.Distance(obj.transform.position, pos) > 4f);
+
 
             if (Interactibles.Count == 0) return;
+            loggerInstance.Msg($"[PopIn] {Interactibles.Count} objects found");
 
             foreach (GameObject inter in Interactibles)
             {
+                if (processedVisuals.Contains(inter)) continue;
+
                 foreach (MeshRenderer mesh in inter.GetComponentsInChildren<MeshRenderer>(true))
                 {
                     mesh.material = new Material(sonarMaterial);
                     SetShaderColor(mesh.material, new Color32(51, 204, 255, 255));
+                }
+                foreach (SkinnedMeshRenderer skin in inter.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+                {
+                    skin.material = new Material(sonarMaterial);
+                    SetShaderColor(skin.material, new Color32(51, 204, 255, 255));
                 }
                 foreach (LineRenderer line in inter.GetComponentsInChildren<LineRenderer>(true))
                 {
@@ -413,6 +434,8 @@ namespace BlindRumble2
             {
                 if (Vector3.Distance(inter.transform.position, pos) > 4f)
                 {
+                    if (inter == null) return true;
+
                     if (inter != null) MelonCoroutines.Start(ScaleClone(inter.transform, Vector3.zero, 0.05f, false));
                     return true;
                 }

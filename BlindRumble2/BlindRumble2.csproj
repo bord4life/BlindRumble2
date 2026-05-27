@@ -7,7 +7,13 @@
 		<Reference Include="C:\Program Files (x86)\Steam\steamapps\common\RUMBLEMelonLoader\net6\**\*.dll" Private="false" />
 		<Reference Include="C:\Program Files (x86)\Steam\steamapps\common\RUMBLE\MelonLoader\net35\**\*.dll" Private="false" />
 		<Reference Include="C:\Program Files (x86)\Steam\steamapps\common\RUMBLE\MelonLoader\Il2CppAssemblies\**\*.dll" Private="false" />
-	</ItemGroup>	<ItemGroup>
+	</ItemGroup>	
+	<ItemGroup>
+	  <None Remove="Shader\poseghostshader" />
+	</ItemGroup>
+	<ItemGroup>
+	  <EmbeddedResource Include="Shader\poseghostshader" />
+	</ItemGroup><ItemGroup>
 	  <Reference Include="Il2CppInterop.Runtime">
 	    <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\RUMBLE\MelonLoader\net6\Il2CppInterop.Runtime.dll</HintPath>
 	  </Reference>
