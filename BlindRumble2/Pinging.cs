@@ -25,7 +25,8 @@ namespace BlindRumble2
                 {
                     return;
                 }
-                MelonCoroutines.Start(CreateSnapshot(true, false, null, __instance));
+                loggerInstance.Msg("structure");
+                MelonCoroutines.Start(CreateSnapshot(true, null, __instance));
             }
         }
 
@@ -49,7 +50,7 @@ namespace BlindRumble2
 				}
 				else if (handOne != localPlayer || handTwo != localPlayer)
 				{
-					MelonCoroutines.Start(CreateSnapshot(false, false, localPlayer.Controller));
+					MelonCoroutines.Start(CreateSnapshot(false,localPlayer.Controller));
 				}
 			}
 		}

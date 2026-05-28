@@ -1,4 +1,7 @@
+using Il2CppExitGames.Client.Photon;
 using Il2CppPhoton.Pun;
+using Il2CppPhoton.Realtime;
+using Il2CppRootMotion.FinalIK;
 using Il2CppRUMBLE.Managers;
 using Il2CppRUMBLE.MoveSystem;
 using Il2CppRUMBLE.Players;
@@ -13,6 +16,7 @@ using UIFramework;
 using Unity.Hierarchy;
 using UnityEngine;
 using UnityEngine.InputSystem.HID;
+using UnityEngine.InputSystem.XR;
 
 #region MelonInfo
 [assembly: MelonInfo(typeof(BlindRumble2.Core), BlindRumble2.BuildInfo.ModName, BlindRumble2.BuildInfo.ModVersion, BlindRumble2.BuildInfo.Author)]
@@ -25,7 +29,7 @@ using UnityEngine.InputSystem.HID;
 // IMPORTANT add option to reload every pulse
 namespace BlindRumble2
 {
-    public class Core : MelonMod
+    public class Core : Utilities.RumbleMod
     {
         #region Variables
 
@@ -37,13 +41,14 @@ namespace BlindRumble2
         public static bool modEnabled = true;
         public static bool EIGym = true; // EI = EnableIn
         public static bool EIPark;
-        public static bool EIMatch;
+        public static bool EIRing;
+        public static bool EIPit;
         public static Color MainSonar;
         public static Color SecondarySonar;
         public static MelonLogger.Instance loggerInstance;
         public static Transform blindRumbleAssets;
         public static Transform clones;
-        public static Player enemyPlayer;
+        public static Il2CppRUMBLE.Players.Player enemyPlayer;
         public static GameObject dummyHealthbar;
         public static GameObject playerHealth;
         public static int dummyHealth = 20;
@@ -65,7 +70,7 @@ namespace BlindRumble2
             {
                 GetSonarShader();
             }
-            else if (modEnabled && IsShaderFound)
+            else if (modEnabled && !CurrentSceneName.Contains("Map"))
             {
                 MelonCoroutines.Start(SonarifyScene());
 
@@ -74,9 +79,10 @@ namespace BlindRumble2
                 clones.SetParent(blindRumbleAssets);
                 MelonCoroutines.Start(BewareOfThePreloadedStructures());
             }
-            else
+            else if (modEnabled && CurrentSceneName.Contains("Map"))
             {
-                return;
+                SendData();
+                MelonCoroutines.Start(SonarifyScene());
             }
         }
 
@@ -90,6 +96,8 @@ namespace BlindRumble2
 
         public override void OnLateInitializeMelon()
         {
+            RegisterEvents();
+
             Actions.onPlayerHealthChanged += (player, damage) =>
             {
                 if (player != Calls.Players.GetLocalPlayer())
@@ -125,9 +133,8 @@ namespace BlindRumble2
             timer += Time.deltaTime;
             if (timer >= 0.5f)
             {
-                LoggerInstance.Msg("WEE WOO WEE WOO WE ARE UPDATING");
                 timer = 0f;
-                PopIn();
+                if (CurrentSceneName is "Gym" or "Park") PopIn();
             }
         }
 
@@ -137,8 +144,10 @@ namespace BlindRumble2
         public static void GetSonarShader()
         {
             Shader shader = AssetBundles.LoadAssetFromStream<Shader>(instance, "BlindRumble2.Shader.poseghostshader", "Ghost");
-            sonarMaterial = new(shader);
-            sonarMaterial.hideFlags = sonarMaterial.hideFlags = HideFlags.HideAndDontSave | HideFlags.DontUnloadUnusedAsset;
+            sonarMaterial = new(shader)
+            {
+                hideFlags = HideFlags.HideAndDontSave | HideFlags.DontUnloadUnusedAsset
+            };
 
             for (int i = 0; i < shader.GetPropertyCount(); i++)
             {
@@ -251,38 +260,107 @@ namespace BlindRumble2
             }
         }
 
-        public static IEnumerator CreateSnapshot(bool isItStructure, bool poseTrigger, PlayerController player = null, Structure structure = null)
+        public static IEnumerator CreateSnapshot(bool isItStructure, PlayerController player = null, Structure structure = null, bool addToCloneList = true)
         {
             if (sonarMaterial == null) yield break;
 
-            if (player == Calls.Players.GetLocalPlayerController())
-            {
-                yield break;
-            }
+            if (player == Calls.Players.GetLocalPlayerController()) yield break;
+
             if (isItStructure == false)
             {
-                foreach (Behaviour component in player.GetComponents<Behaviour>())
+                Transform clone = GameObject.Instantiate(player.gameObject, clones).transform;
+                Transform cloneVisuals = clone.GetChild(1).transform;
+
+                Transform VR = clone.GetChild(2).transform;
+                Transform leftController = VR.GetChild(1).transform;
+                Transform rightController = VR.GetChild(2).transform;
+                Transform pillBody = clone.GetChild(3).GetChild(0).transform;
+                Transform headset = VR.GetChild(0).GetChild(0).transform;
+
+                Transform VROriginal = player.transform.GetChild(2).transform;
+                Transform leftControllerOriginal = VROriginal.GetChild(1).transform;
+                Transform rightControllerOriginal = VROriginal.GetChild(2).transform;
+                Transform pillBodyOriginal = player.transform.GetChild(3).GetChild(0).transform;
+                Transform headsetOriginal = VROriginal.GetChild(0).GetChild(0).transform;
+
+                Vector3 oldSize;
+
+                clone.GetComponent<PlayerController>().assignedPlayer = null;
+                leftController.gameObject.GetComponent<TrackedPoseDriver>().enabled = false;
+                rightController.gameObject.GetComponent<TrackedPoseDriver>().enabled = false;
+
+                cloneVisuals.GetComponent<VRIK>().enabled = true;
+
+                pillBody.position = pillBodyOriginal.position;
+                headset.position = headsetOriginal.position;
+                leftController.position = leftControllerOriginal.position;
+                rightController.position = rightControllerOriginal.position;
+
+                pillBody.rotation = pillBodyOriginal.rotation;
+                headset.rotation = headsetOriginal.rotation;
+                leftController.rotation = leftControllerOriginal.rotation;
+                rightController.rotation = rightControllerOriginal.rotation;
+
+                oldSize = cloneVisuals.localScale;
+
+                foreach (Behaviour component in clone.GetComponents<Behaviour>())
                 {
                     component.enabled = false;
                 }
-
-                Transform cloneVisuals = GameObject.Instantiate(player.PlayerVisuals.gameObject, clones).transform;
 
                 foreach (Behaviour component in cloneVisuals.GetComponents<Behaviour>())
                 {
                     component.enabled = false;
                 }
 
-                SkinnedMeshRenderer renderer = cloneVisuals.GetComponent<SkinnedMeshRenderer>();
-                renderer.material = new Material(sonarMaterial);
-                SetShaderColor(renderer.material, MainSonar);
-
-                if (!poseTrigger)
+                Rigidbody[] rigidbodies = clone.GetComponentsInChildren<Rigidbody>();
+                foreach (Rigidbody rb in rigidbodies)
                 {
-                    yield return new WaitForSeconds(1.45f);
-                    MelonCoroutines.Start(ScaleClone(player.transform, Vector3.zero, 0.05f, false));
+                    rb.isKinematic = true;
                 }
 
+                Renderer[] cloneRenderers = clone.GetComponentsInChildren<Renderer>();
+                foreach (var rend in cloneRenderers)
+                {
+                    rend.enabled = true;
+                }
+
+                Collider cloneCollider = clone.GetComponent<Collider>();
+                MeshCollider meshCloneCollider = clone.GetComponent<MeshCollider>();
+
+                Collider[] cloneColliders = clone.GetComponentsInChildren<Collider>();
+                MeshCollider[] meshCloneColliders = clone.GetComponentsInChildren<MeshCollider>();
+
+                foreach (var rend in cloneColliders)
+                {
+                    rend.enabled = false;
+                }
+
+                foreach (var rend in meshCloneColliders)
+                {
+                    rend.enabled = false;
+                }
+
+                if (cloneCollider != null)
+                {
+                    cloneCollider.enabled = false;
+                }
+                if (meshCloneCollider != null)
+                {
+                    meshCloneCollider.enabled = false;
+                }
+
+                if (addToCloneList)
+                {
+
+                }
+                else
+                {
+
+                }
+                
+                yield return new WaitForSeconds(1.45f);
+                MelonCoroutines.Start(ScaleClone(player.transform, Vector3.zero, 0.05f, false));
                 GameObject.Destroy(cloneVisuals);
             }
             else if (isItStructure == true)
@@ -339,10 +417,8 @@ namespace BlindRumble2
 
         public static IEnumerator CreateOppHealthbar()
         {
-            if (CurrentSceneName == "Gym")
-            {
-                yield break;
-            }
+            if (CurrentSceneName == "Gym") yield break;
+
             while (Calls.Players.GetEnemyPlayers().Count <= 0)
             {
                 yield return null;
@@ -389,7 +465,6 @@ namespace BlindRumble2
                 }
             }
 
-
             if (Interactibles.Count == 0) return;
             loggerInstance.Msg($"[PopIn] {Interactibles.Count} objects found");
 
@@ -432,17 +507,44 @@ namespace BlindRumble2
 
             processedVisuals.RemoveAll(inter =>
             {
+                if (inter == null) return true;
                 if (Vector3.Distance(inter.transform.position, pos) > 4f)
                 {
-                    if (inter == null) return true;
-
-                    if (inter != null) MelonCoroutines.Start(ScaleClone(inter.transform, Vector3.zero, 0.05f, false));
+                    MelonCoroutines.Start(ScaleClone(inter.transform, Vector3.zero, 0.05f, false));
                     return true;
                 }
                 return false;
             });
         }
 
+        #endregion
+
+        #region Networking stuff
+        public void SendData()
+        { 
+            List<Il2CppSystem.Object> data = new();
+            
+            if (EIRing) data.Add(true); 
+            else data.Add(false);
+
+            if (EIPit) data.Add(true);
+            else data.Add(false);
+
+            RaiseEventOptions options = new()
+            {
+                Receivers = ReceiverGroup.Others,
+                CachingOption = EventCaching.AddToRoomCache   
+            };
+
+            RaiseEvent(data, options, SendOptions.SendReliable);
+        }
+
+        public override void OnEvent(List<Il2CppSystem.Object> data)
+        {
+            if (CurrentSceneName == "Park") return;
+            EIRing = data[0].ToString() == "True";
+            EIPit = int.Parse(data[1].ToString()) == 1;
+        }
         #endregion
     }
 }

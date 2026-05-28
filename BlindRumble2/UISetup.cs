@@ -15,7 +15,8 @@ namespace BlindRumble2
         internal static MelonPreferences_Entry<bool> enabledMod;
         internal static MelonPreferences_Entry<bool> enableInGym;
         internal static MelonPreferences_Entry<bool> enableInPark;
-        internal static MelonPreferences_Entry<bool> enableInMatch;
+        internal static MelonPreferences_Entry<bool> enableInRing;
+        internal static MelonPreferences_Entry<bool> enableInPit;
         internal static MelonPreferences_Entry<string> MainColor;
         internal static MelonPreferences_Entry<string> SecondaryColor;
 
@@ -31,16 +32,17 @@ namespace BlindRumble2
             }
                 
 
-            category1 = MelonPreferences.CreateCategory("BlindRumbleMain");
+            category1 = MelonPreferences.CreateCategory("BlindRumbleMain", "Main");
             category1.SetFilePath(Path.Combine(USER_DATA, CONFIG_FILE));
 
-            category2 = MelonPreferences.CreateCategory("BLindRumbleColors");
+            category2 = MelonPreferences.CreateCategory("BlindRumbleColors", "Colors");
             category2.SetFilePath(Path.Combine(USER_DATA, CONFIG_FILE));
 
             enabledMod = category1.CreateEntry("enabledMod", true, "Enable Mod", "Enables the mod. Other settings wont work if this is disabled.");
             enableInGym = category1.CreateEntry("enableInGym", false, "Enable In Gym", "Enables Blind Rumble within Gym. Defaults to false.", !enabledMod.Value);
             enableInPark = category1.CreateEntry("enableInPark", true, "Enable In Park", "Enables Blind Rumble within Park. Defaults to true.", !enabledMod.Value);
-            enableInMatch = category1.CreateEntry("enableInMatch", true, "Enable In Match", "Enables Blind Rumble within a match. Defaults to true.", !enabledMod.Value);
+            enableInRing = category1.CreateEntry("enableInRing", true, "Enable In Ring", "Enables Blind Rumble within Ring. Defaults to true.", !enabledMod.Value);
+            enableInPit = category1.CreateEntry("enableInMatch", true, "Enable In Match", "Enables Blind Rumble within Pit. Defaults to true.", !enabledMod.Value);
             MainColor = category2.CreateEntry("MainColor", "#fed44a", "Main Color", "Color used for structures and players. Hex format (ex. #ffffff).", !enabledMod.Value);
             SecondaryColor = category2.CreateEntry("SecondaryColor", "#31966b", "Secondary Color", "Color used for scene stuff. Hex format.", !enabledMod.Value);
         }
@@ -50,7 +52,8 @@ namespace BlindRumble2
             modEnabled = enabledMod.Value;
             EIGym = enableInGym.Value;
             EIPark = enableInPark.Value;
-            EIMatch = enableInMatch.Value;
+            EIRing = enableInRing.Value;
+            EIPit = enableInPit.Value;
             if (!HexToColor(MainColor.Value, out MainSonar)) loggerInstance.Error("Main Color did not save!\nCauses are improper syntax or wrong format.");
             if (!HexToColor(SecondaryColor.Value, out SecondarySonar)) loggerInstance.Error("Secondary Color did not save!\nCauses are improper syntax or wrong format.");
 
