@@ -8,7 +8,7 @@ With this, you won't always see your opponent, so you have to predict and stay a
 ## To-Do
 - [x] Learn some C#
 - [ ] Create a good pinging system
-	- [ ] Players
+	- [x] Players
 	- [ ] Structures
 - [ ] Shade the maps properly
 	- [ ] Gym
@@ -16,7 +16,7 @@ With this, you won't always see your opponent, so you have to predict and stay a
 	- [ ] Ring
 	- [ ] Pit
 - [x] Add UIF settings
-- [ ] Add Audio
+- [x] Add Audio
 - [ ] Release the mod
 - [ ] Make sure it doesnt break after the next update
 
@@ -28,7 +28,7 @@ With this, you won't always see your opponent, so you have to predict and stay a
 
 - Changes visuals to a sonar/sound system
 - Players create snapshots whenever they do a pose or uses any form of movement.
-- later...
+- Seismic slam - Creates a vibration that reveals everything on the map for you and your opponent.
 <hr>
 
 ## Requirements

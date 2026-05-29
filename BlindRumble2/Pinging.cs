@@ -3,6 +3,7 @@ using Il2CppRUMBLE.Managers;
 using Il2CppRUMBLE.MoveSystem;
 using Il2CppRUMBLE.Players;
 using Il2CppRUMBLE.Players.Subsystems;
+using Il2CppRUMBLE.Poses;
 using MelonLoader;
 using RumbleModdingAPI.RMAPI;
 using UnityEngine;
@@ -11,8 +12,8 @@ using static RumbleModdingAPI.RMAPI.GameObjects.Gym.LOGIC;
 
 namespace BlindRumble2
 {
-	internal class PingingPatches
-	{
+    internal class PingingPatches
+    {
         #region Pose-related stuff
 
         [HarmonyPatch(typeof(Structure), "OnFetchFromPool")]
@@ -26,7 +27,9 @@ namespace BlindRumble2
                     return;
                 }
                 loggerInstance.Msg("structure");
-                MelonCoroutines.Start(CreateSnapshot(true, null, __instance));
+                List<Structure> structureList = new();
+                structureList.Add(__instance);
+                MelonCoroutines.Start(CreateSnapshot(null, structureList));
             }
         }
 
@@ -35,26 +38,37 @@ namespace BlindRumble2
         #region other kinds of pinging
 
         [HarmonyPatch(typeof(PlayerBoxInteractionSystem), "OnPlayerBoxInteraction", new Type[] { typeof(PlayerBoxInteractionTrigger), typeof(PlayerBoxInteractionTrigger) })]
-		internal class FistPinging
-		{
-			[HarmonyPostfix]
-			public static void Postfix(PlayerBoxInteractionTrigger first, PlayerBoxInteractionTrigger second)
-			{ 
-				var localPlayer = Calls.Players.GetLocalPlayer();
-				var handOne = first.parentSystem.parentController.assignedPlayer;
-				var handTwo = second.parentSystem.parentController.assignedPlayer;
+        internal class FistPinging
+        {
+            [HarmonyPostfix]
+            public static void Postfix(PlayerBoxInteractionTrigger first, PlayerBoxInteractionTrigger second)
+            {
+                var localPlayer = Calls.Players.GetLocalPlayer();
+                var handOne = first.parentSystem.parentController.assignedPlayer;
+                var handTwo = second.parentSystem.parentController.assignedPlayer;
 
-				if (handOne == localPlayer && handTwo == localPlayer)
-				{
+                if (handOne == localPlayer && handTwo == localPlayer)
+                {
 
-				}
-				else if (handOne != localPlayer || handTwo != localPlayer)
-				{
-					MelonCoroutines.Start(CreateSnapshot(false,localPlayer.Controller));
-				}
-			}
-		}
+                }
+                else if (handOne != localPlayer || handTwo != localPlayer)
+                {
+                    MelonCoroutines.Start(CreateSnapshot(localPlayer.Controller));
+                }
+            }
+        }
 
+        [HarmonyLib.HarmonyPatch(typeof(PlayerPoseSystem), nameof(PlayerPoseSystem.OnPoseSetCompleted), new Type[] { typeof(PoseSet) })]
+        private static class PosePatch
+        {
+            private static void Postfix(PoseSet set)
+            {
+                if (set.name == "PoseSetRockjump")
+                {
+                    SeismicSlam();
+                }
+            }
+        }
         #endregion
     }
 }

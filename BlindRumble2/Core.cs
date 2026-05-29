@@ -1,7 +1,10 @@
+using Harmony;
 using Il2CppExitGames.Client.Photon;
 using Il2CppPhoton.Pun;
 using Il2CppPhoton.Realtime;
+using Il2CppPOpusCodec.Enums;
 using Il2CppRootMotion.FinalIK;
+using Il2CppRUMBLE.Audio;
 using Il2CppRUMBLE.Managers;
 using Il2CppRUMBLE.MoveSystem;
 using Il2CppRUMBLE.Players;
@@ -17,6 +20,7 @@ using Unity.Hierarchy;
 using UnityEngine;
 using UnityEngine.InputSystem.HID;
 using UnityEngine.InputSystem.XR;
+
 
 #region MelonInfo
 [assembly: MelonInfo(typeof(BlindRumble2.Core), BlindRumble2.BuildInfo.ModName, BlindRumble2.BuildInfo.ModVersion, BlindRumble2.BuildInfo.Author)]
@@ -54,6 +58,8 @@ namespace BlindRumble2
         public static int dummyHealth = 20;
         public static float timer;
         public static List<GameObject> processedVisuals = new();
+        public static Dictionary<GameObject, List<GameObject>> cloneGroups = new();
+        public static AudioCall seismicSlam;
         public static bool iHaveWayTooManyVariables = false;
 
         #endregion
@@ -69,6 +75,7 @@ namespace BlindRumble2
             if (CurrentSceneName == "Loader")
             {
                 GetSonarShader();
+                seismicSlam =  RumbleModdingAPI.RMAPI.AudioManager.CreateAudioCall("UserData/BlindRumble2/seismic_slam_buildup.wav", 1);
             }
             else if (modEnabled && !CurrentSceneName.Contains("Map"))
             {
@@ -79,7 +86,7 @@ namespace BlindRumble2
                 clones.SetParent(blindRumbleAssets);
                 MelonCoroutines.Start(BewareOfThePreloadedStructures());
             }
-            else if (modEnabled && CurrentSceneName.Contains("Map"))
+            else if (modEnabled && CurrentSceneName is "Map0" or "Map1")
             {
                 SendData();
                 MelonCoroutines.Start(SonarifyScene());
@@ -260,13 +267,13 @@ namespace BlindRumble2
             }
         }
 
-        public static IEnumerator CreateSnapshot(bool isItStructure, PlayerController player = null, Structure structure = null, bool addToCloneList = true)
+        public static IEnumerator CreateSnapshot(PlayerController player = null, List<Structure> structures = null, bool addToCloneList = true)
         {
             if (sonarMaterial == null) yield break;
 
             if (player == Calls.Players.GetLocalPlayerController()) yield break;
 
-            if (isItStructure == false)
+            if (player != null)
             {
                 Transform clone = GameObject.Instantiate(player.gameObject, clones).transform;
                 Transform cloneVisuals = clone.GetChild(1).transform;
@@ -283,8 +290,6 @@ namespace BlindRumble2
                 Transform pillBodyOriginal = player.transform.GetChild(3).GetChild(0).transform;
                 Transform headsetOriginal = VROriginal.GetChild(0).GetChild(0).transform;
 
-                Vector3 oldSize;
-
                 clone.GetComponent<PlayerController>().assignedPlayer = null;
                 leftController.gameObject.GetComponent<TrackedPoseDriver>().enabled = false;
                 rightController.gameObject.GetComponent<TrackedPoseDriver>().enabled = false;
@@ -300,8 +305,6 @@ namespace BlindRumble2
                 headset.rotation = headsetOriginal.rotation;
                 leftController.rotation = leftControllerOriginal.rotation;
                 rightController.rotation = rightControllerOriginal.rotation;
-
-                oldSize = cloneVisuals.localScale;
 
                 foreach (Behaviour component in clone.GetComponents<Behaviour>())
                 {
@@ -350,38 +353,66 @@ namespace BlindRumble2
                     meshCloneCollider.enabled = false;
                 }
 
+                float delay;
+                float timeToDestroy;
+
                 if (addToCloneList)
                 {
+                    if (!cloneGroups.ContainsKey(player.gameObject))
+                    {
+                        cloneGroups[player.gameObject] = new List<GameObject>();
+                    }
 
+                    //if (collidedWithMap == true)
+                    //{
+                    //    cooldownTime = 0.1f;
+                    //}
+
+                    cloneGroups[player.gameObject].Add(clone.gameObject);
+                    //cloneCooldowns[player.gameObject] = cooldownTime;
+
+                    delay = 0;
+                    timeToDestroy = 1f;
                 }
                 else
                 {
+                    if (!cloneGroups.ContainsKey(player.gameObject))
+                    {
+                        cloneGroups[player.gameObject] = new List<GameObject>();
+                    }
 
+                    delay = (cloneGroups[player.gameObject].Count - 1) * 0.1f;
+                    timeToDestroy = 1f + (cloneGroups[player.gameObject].Count - 1) * 0.1f;
                 }
-                
-                yield return new WaitForSeconds(1.45f);
-                MelonCoroutines.Start(ScaleClone(player.transform, Vector3.zero, 0.05f, false));
-                GameObject.Destroy(cloneVisuals);
+
+                clone.GetChild(4).gameObject.active = false;
+                clone.GetChild(5).gameObject.active = false;
+                clone.GetChild(7).gameObject.active = false;
+
+                MelonCoroutines.Start(DestroyCloneAfterDelay(clone.gameObject, delay, player.gameObject, cloneVisuals.gameObject));
             }
-            else if (isItStructure == true)
+            else if (structures != null)
             {
-                Transform Structure = GameObject.Instantiate(structure.gameObject, clones).transform;
-                MeshRenderer structureVisuals = null;
-                if (Structure.GetName() == "LargeRock" || Structure.GetName() == "SmallRock")
+                foreach (Structure struc in structures)
                 {
-                    structureVisuals = Structure.GetComponent<MeshRenderer>();
-                }
-                else if (Structure.GetName() != "LargeRock" && Structure.GetName() != "SmallRock")
-                {
-                    structureVisuals = Structure.GetChild(0).GetComponent<MeshRenderer>();
-                }
+                    Transform Structure = GameObject.Instantiate(struc.gameObject, clones).transform;
+                    MeshRenderer structureVisuals = null;
+                    if (Structure.GetName() == "LargeRock" || Structure.GetName() == "SmallRock")
+                    {
+                        structureVisuals = Structure.GetComponent<MeshRenderer>();
+                    }
+                    else if (Structure.GetName() != "LargeRock" && Structure.GetName() != "SmallRock")
+                    {
+                        structureVisuals = Structure.GetChild(0).GetComponent<MeshRenderer>();
+                    }
 
-                Structure.GetComponent<Structure>().enabled = false;
-                Structure.GetComponent<Rigidbody>().isKinematic = true;
-                Structure.GetComponent<Collider>().enabled = false;
+                    Structure.GetComponent<Structure>().enabled = false;
+                    Structure.GetComponent<Rigidbody>().isKinematic = true;
+                    Structure.GetComponent<Collider>().enabled = false;
 
-                structureVisuals.material = new Material(sonarMaterial);
-                SetShaderColor(structureVisuals.material, MainSonar);
+                    structureVisuals.material = new Material(sonarMaterial);
+                    SetShaderColor(structureVisuals.material, MainSonar);
+                }
             }
         }
 
@@ -398,7 +429,69 @@ namespace BlindRumble2
             iHaveWayTooManyVariables = true;
         }
 
-        public static IEnumerator ScaleClone(Transform clone, Vector3 newScale, float length, bool startFrom0)
+        private static IEnumerator DestroyCloneAfterDelay(GameObject clone, float delay, GameObject original, GameObject cloneVisuals = null)
+        {
+            float elapsedTime = 0f;
+
+            while (clone != null)
+            {
+                if (cloneVisuals == null)
+                {
+                    var holdVFX = clone.transform.Find("Hold_VFX");
+                    var flickVFX = clone.transform.Find("Flick_VFX");
+
+                    if (holdVFX != null || flickVFX != null)
+                    {
+                        yield return MelonCoroutines.Start(ScaleClone(clone.transform, UnityEngine.Vector3.zero, 0.05f));
+                        break;
+                    }
+                }
+                else
+                {
+                    yield return new WaitForSeconds(delay);
+
+                    yield return MelonCoroutines.Start(ScaleClone(cloneVisuals.transform, UnityEngine.Vector3.zero, 0.05f));
+                    break;
+                }
+
+
+                elapsedTime += Time.deltaTime;
+                if (elapsedTime >= delay)
+                {
+                    yield return MelonCoroutines.Start(ScaleClone(clone.transform, UnityEngine.Vector3.zero, 0.05f));
+                    break;
+                }
+
+                yield return null;
+            }
+
+
+            if (clone != null)
+            {
+
+
+                if (cloneGroups.ContainsKey(original))
+                {
+                    cloneGroups[original].Remove(clone);
+                    if (cloneGroups[original].Count == 0)
+                    {
+                        cloneGroups.Remove(original);
+                    }
+                }
+
+                if (clone.transform.Find("Visuals") && clone.transform.Find("Visuals").Find("Renderer"))
+                {
+                    GameObject.Destroy(clone.transform.GetChild(0).GetChild(0).gameObject);
+
+                    GameObject.Destroy(clone.transform.GetChild(0).gameObject);
+                }
+
+
+                GameObject.Destroy(clone);
+            }
+        }
+
+        public static IEnumerator ScaleClone(Transform clone, Vector3 newScale, float length, bool startFrom0 = false)
         {
             float elapsed = 0f;
             Vector3 originalScale = clone.localScale;
@@ -449,6 +542,9 @@ namespace BlindRumble2
             PopOut();
 
             Vector3 pos = PlayerManager.instance.localPlayer.Controller.transform.position;
+
+            GameObject matchConsole = GameObjects.Gym.INTERACTABLES.MatchConsole.GetGameObject();
+            if (matchConsole != null) loggerInstance.Msg($"[MatchConsole] dist: {Vector3.Distance(matchConsole.transform.position, pos)}");
 
             List<GameObject> Interactibles = new();
 
@@ -517,14 +613,39 @@ namespace BlindRumble2
             });
         }
 
+        public static IEnumerator SeismicSlam()
+        {
+            Il2CppRUMBLE.Players.Player slammer = null;
+            List<Structure> structures = new();
+
+            for (int i = 0; i < PlayerManager.instance.AllPlayers.Count; i++)
+            {
+                if (Calls.Players.GetPlayerByActorNo(i).Controller.PlayerMovement.WasGrounded == false)
+                {
+                    slammer = Calls.Players.GetPlayerByActorNo(i);
+                    break;
+                }
+            }
+            while (!slammer.Controller.PlayerMovement.WasGrounded) yield return null;
+            RumbleModdingAPI.RMAPI.AudioManager.PlaySound(seismicSlam, slammer.Controller.transform.localPosition);
+            
+            Collider[] colliders = Physics.OverlapSphere(slammer.Controller.transform.localPosition, 50f);
+            foreach (Collider col in colliders)
+            {
+                if (col.GetComponent<Structure>() != null) structures.Add(col.GetComponent<Structure>());
+            }
+            loggerInstance.Msg(structures.Count);
+            CreateSnapshot(null, structures);
+        }
+
         #endregion
 
         #region Networking stuff
         public void SendData()
-        { 
+        {
             List<Il2CppSystem.Object> data = new();
-            
-            if (EIRing) data.Add(true); 
+
+            if (EIRing) data.Add(true);
             else data.Add(false);
 
             if (EIPit) data.Add(true);
@@ -533,7 +654,7 @@ namespace BlindRumble2
             RaiseEventOptions options = new()
             {
                 Receivers = ReceiverGroup.Others,
-                CachingOption = EventCaching.AddToRoomCache   
+                CachingOption = EventCaching.AddToRoomCache
             };
 
             RaiseEvent(data, options, SendOptions.SendReliable);
@@ -543,7 +664,9 @@ namespace BlindRumble2
         {
             if (CurrentSceneName == "Park") return;
             EIRing = data[0].ToString() == "True";
-            EIPit = int.Parse(data[1].ToString()) == 1;
+            EIPit = data[1].ToString() == "True";
+
+
         }
         #endregion
     }
