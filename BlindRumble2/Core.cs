@@ -729,7 +729,7 @@ namespace BlindRumble2
                 if (col.GetComponent<Structure>() != null) structures.Add(col.GetComponent<Structure>());
             }
             loggerInstance.Msg(structures.Count);
-            MelonCoroutines.Start(CreateSnapshot(null, structures);
+            MelonCoroutines.Start(CreateSnapshot(null, structures));
         }
 
         public static void Criterion()
