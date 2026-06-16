@@ -1,18 +1,15 @@
 ﻿using HarmonyLib;
 using Il2CppRUMBLE.Managers;
 using Il2CppRUMBLE.MoveSystem;
-using Il2CppRUMBLE.Players;
 using Il2CppRUMBLE.Players.Subsystems;
 using Il2CppRUMBLE.Poses;
 using MelonLoader;
 using RumbleModdingAPI.RMAPI;
-using UnityEngine;
 using static BlindRumble2.Core;
-using static RumbleModdingAPI.RMAPI.GameObjects.Gym.LOGIC;
 
 namespace BlindRumble2
 {
-    internal class PingingPatches
+    internal class Patches
     {
         #region Pose-related stuff
 
@@ -35,7 +32,7 @@ namespace BlindRumble2
 
         #endregion
 
-        #region other kinds of pinging
+        #region other kinds of patches
 
         [HarmonyPatch(typeof(PlayerBoxInteractionSystem), "OnPlayerBoxInteraction", new Type[] { typeof(PlayerBoxInteractionTrigger), typeof(PlayerBoxInteractionTrigger) })]
         internal class FistPinging
@@ -58,14 +55,27 @@ namespace BlindRumble2
             }
         }
 
-        [HarmonyLib.HarmonyPatch(typeof(PlayerPoseSystem), nameof(PlayerPoseSystem.OnPoseSetCompleted), new Type[] { typeof(PoseSet) })]
-        private static class PosePatch
+        [HarmonyPatch(typeof(PlayerPoseSystem), nameof(PlayerPoseSystem.OnPoseSetCompleted), typeof(PoseSet))]
+        internal class PosePatch
         {
             private static void Postfix(PoseSet set)
             {
                 if (set.name == "PoseSetRockjump")
                 {
                     SeismicSlam();
+                }
+            }
+        }
+
+        [HarmonyPatch(typeof(Il2CppRUMBLE.Environment.Matchmaking.MatchmakeConsole), "MatchmakeStatusUpdated", typeof(MatchmakingHandler.MatchmakeStatus))]
+        internal class MatchMade
+        {
+            private static void PreFix(MatchmakingHandler.MatchmakeStatus status)
+            {
+                if (status == MatchmakingHandler.MatchmakeStatus.Success)
+                {
+                    loggerInstance.Msg("---- Match found ----");
+                    matchFound = true;
                 }
             }
         }

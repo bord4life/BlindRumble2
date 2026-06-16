@@ -1,10 +1,12 @@
 using Harmony;
 using Il2CppExitGames.Client.Photon;
+using Il2CppMS.Internal.Xml.XPath;
 using Il2CppPhoton.Pun;
 using Il2CppPhoton.Realtime;
 using Il2CppPOpusCodec.Enums;
 using Il2CppRootMotion.FinalIK;
 using Il2CppRUMBLE.Audio;
+using Il2CppRUMBLE.Interactions.InteractionBase;
 using Il2CppRUMBLE.Managers;
 using Il2CppRUMBLE.MoveSystem;
 using Il2CppRUMBLE.Players;
@@ -20,6 +22,7 @@ using Unity.Hierarchy;
 using UnityEngine;
 using UnityEngine.InputSystem.HID;
 using UnityEngine.InputSystem.XR;
+using UnityEngine.Playables;
 
 
 #region MelonInfo
@@ -30,6 +33,7 @@ using UnityEngine.InputSystem.XR;
 [assembly: VerifyLoaderVersion(0, 7, 2, true)]
 [assembly: MelonAdditionalDependencies("UIFramework")]
 #endregion
+
 // IMPORTANT add option to reload every pulse
 namespace BlindRumble2
 {
@@ -42,13 +46,6 @@ namespace BlindRumble2
         public static bool IsShaderFound = false;
         public static string CurrentSceneName = "Loader";
         public static Material sonarMaterial;
-        public static bool modEnabled = true;
-        public static bool EIGym = true; // EI = EnableIn
-        public static bool EIPark;
-        public static bool EIRing;
-        public static bool EIPit;
-        public static Color MainSonar;
-        public static Color SecondarySonar;
         public static MelonLogger.Instance loggerInstance;
         public static Transform blindRumbleAssets;
         public static Transform clones;
@@ -57,10 +54,22 @@ namespace BlindRumble2
         public static GameObject playerHealth;
         public static int dummyHealth = 20;
         public static float timer;
-        public static List<GameObject> processedVisuals = new();
-        public static Dictionary<GameObject, List<GameObject>> cloneGroups = new();
         public static AudioCall seismicSlam;
+        public static bool matchFound;
+        public static bool reqFufilled = false;
         public static bool iHaveWayTooManyVariables = false;
+
+        public static List<GameObject> processedVisuals = new();
+        public static Dictionary<GameObject, Structure> ObjsWithExplode = new();
+        public static Dictionary<GameObject, List<GameObject>> cloneGroups = new();
+
+        public static bool modEnabled;
+        public static bool EIGym;
+        public static bool EIPark;
+        public static bool EIRing;
+        public static bool EIPit;
+        public static Color MainSonar;
+        public static Color SecondarySonar;
 
         #endregion
 
@@ -75,7 +84,7 @@ namespace BlindRumble2
             if (CurrentSceneName == "Loader")
             {
                 GetSonarShader();
-                seismicSlam =  RumbleModdingAPI.RMAPI.AudioManager.CreateAudioCall("UserData/BlindRumble2/seismic_slam_buildup.wav", 1);
+                seismicSlam = RumbleModdingAPI.RMAPI.AudioManager.CreateAudioCall("UserData/BlindRumble2/seismic_slam_buildup.wav", 1);
             }
             else if (modEnabled && !CurrentSceneName.Contains("Map"))
             {
@@ -88,6 +97,7 @@ namespace BlindRumble2
             }
             else if (modEnabled && CurrentSceneName is "Map0" or "Map1")
             {
+                Criterion();
                 SendData();
                 MelonCoroutines.Start(SonarifyScene());
             }
@@ -133,6 +143,13 @@ namespace BlindRumble2
                 dummyHealthbar.transform.GetChild(1).localPosition = playerHealth.transform.GetChild(1).localPosition + new Vector3(0, 0.05f, 0);
                 dummyHealthbar.transform.GetChild(1).rotation = playerHealth.transform.GetChild(1).rotation;
             }
+            foreach(var list in ObjsWithExplode)
+            {
+                Structure clone = list.Value;
+                GameObject oruginal = list.Key;
+
+
+            }
         }
 
         public override void OnUpdate()
@@ -168,13 +185,9 @@ namespace BlindRumble2
 
         public static IEnumerator SonarifyScene()
         {
-            if (sonarMaterial == null)
-            {
-                loggerInstance.Error("[SonarifyScene] sonarMaterial is null, aborting.");
-                yield break;
-            }
+            yield return new WaitForSeconds(1);
 
-            if (CurrentSceneName == "Gym")
+            if (CurrentSceneName == "Gym" && EIGym)
             {
                 foreach (Renderer rend in GameObjects.Gym.SCENE.GYM.GetGameObject().GetComponentsInChildren<Renderer>(true))
                 {
@@ -212,7 +225,7 @@ namespace BlindRumble2
                 GameObjects.DDOL.GameInstance.PreInitializable.PoolManager.PoolFruitLongRUMBLEEnvironmentFruit.GetGameObject().active = false;
                 GameObjects.DDOL.GameInstance.PreInitializable.PoolManager.PoolFruitRUMBLEEnvironmentFruit.GetGameObject().active = false;
             }
-            if (CurrentSceneName == "Park")
+            if (CurrentSceneName == "Park" && EIPark)
             {
                 foreach (Renderer rend in GameObjects.Park.SCENE.PARK.GetGameObject().GetComponentsInChildren<Renderer>(true))
                 {
@@ -232,16 +245,16 @@ namespace BlindRumble2
                 GameObjects.DDOL.GameInstance.PreInitializable.PoolManager.PoolFruitLongRUMBLEEnvironmentFruit.GetGameObject().active = false;
                 GameObjects.DDOL.GameInstance.PreInitializable.PoolManager.PoolFruitRUMBLEEnvironmentFruit.GetGameObject().active = false;
             }
-            if (CurrentSceneName.Contains("Map"))
+            if (CurrentSceneName.Contains("Map") && reqFufilled)
             {
-                if (CurrentSceneName == "Map0")
+                if (CurrentSceneName == "Map0" && EIRing)
                 {
                     foreach (Renderer rend in GameObjects.Map0.Scene.Map0.GetGameObject().GetComponentsInChildren<Renderer>(true))
                     {
                         rend.material = sonarMaterial;
                     }
                 }
-                else if (CurrentSceneName == "Map1")
+                else if (CurrentSceneName == "Map1" && EIPit)
                 {
                     foreach (Renderer rend in GameObjects.Map1.Scene.MAP1.GetGameObject().GetComponentsInChildren<Renderer>(true))
                     {
@@ -353,7 +366,6 @@ namespace BlindRumble2
                     meshCloneCollider.enabled = false;
                 }
 
-                float delay;
                 float timeToDestroy;
 
                 if (addToCloneList)
@@ -371,17 +383,15 @@ namespace BlindRumble2
                     cloneGroups[player.gameObject].Add(clone.gameObject);
                     //cloneCooldowns[player.gameObject] = cooldownTime;
 
-                    delay = 0;
                     timeToDestroy = 1f;
                 }
                 else
                 {
                     if (!cloneGroups.ContainsKey(player.gameObject))
                     {
-                        cloneGroups[player.gameObject] = new List<GameObject>();
+                        cloneGroups[player.gameObject] = new();
                     }
 
-                    delay = (cloneGroups[player.gameObject].Count - 1) * 0.1f;
                     timeToDestroy = 1f + (cloneGroups[player.gameObject].Count - 1) * 0.1f;
                 }
 
@@ -389,12 +399,16 @@ namespace BlindRumble2
                 clone.GetChild(5).gameObject.active = false;
                 clone.GetChild(7).gameObject.active = false;
 
-                MelonCoroutines.Start(DestroyCloneAfterDelay(clone.gameObject, delay, player.gameObject, cloneVisuals.gameObject));
+                MelonCoroutines.Start(DestroyCloneAfterDelay(clone.gameObject, timeToDestroy, player.gameObject, cloneVisuals.gameObject));
             }
             else if (structures != null)
             {
                 foreach (Structure struc in structures)
                 {
+                    if (ObjsWithExplode.ContainsKey(struc.gameObject))
+                    {
+
+                    }
                     Transform Structure = GameObject.Instantiate(struc.gameObject, clones).transform;
                     MeshRenderer structureVisuals = null;
                     if (Structure.GetName() == "LargeRock" || Structure.GetName() == "SmallRock")
@@ -412,8 +426,63 @@ namespace BlindRumble2
 
                     structureVisuals.material = new Material(sonarMaterial);
                     SetShaderColor(structureVisuals.material, MainSonar);
+                   
+                    CheckForExplode(struc);
+
+                    if (ObjsWithExplode.ContainsKey(struc.gameObject))
+                    {
+                        if (cloneGroups.ContainsKey(struc.gameObject))
+                        {
+                            continue;
+                        }
+                        else
+                        {
+                            cloneGroups[struc.gameObject] = new();
+                            cloneGroups[struc.gameObject].Add(struc.gameObject);
+                        }
+                    }
                 }
             }
+        }
+
+        public static void UpdExplodedObj(Structure original, Structure clone)
+        {
+            clone.gameObject.Destroy();
+
+            MelonCoroutines.Start(CloneWithDelay(0.2f));
+        }
+
+        public static void CheckForExplode(Structure struc)
+        {
+            List<Structure> strucs = new();
+
+            if (struc.transform.childCount >= 1)
+            {
+                // check explode and add to ObjsWithExplode if not inside
+            }
+
+            if (ObjsWithExplode[struc.gameObject])
+            {
+                Collider[] maybeStrucs = Physics.OverlapSphere(struc.transform.position, 2f);
+
+ 
+                foreach (Collider col in maybeStrucs)
+                {
+                    if (col.TryGetComponent<Structure>(out var structure))
+                    {
+                        strucs.Add(structure);
+                    } 
+                }
+            }
+
+            MelonCoroutines.Start(CloneWithDelay(0.3f, null, strucs));
+        }
+
+        public static IEnumerator CloneWithDelay(float delay, PlayerController player = null, List<Structure> structures = null)
+        {
+            yield return new WaitForSeconds(delay);
+
+            MelonCoroutines.Start(CreateSnapshot(player, structures));
         }
 
         public static IEnumerator BewareOfThePreloadedStructures()
@@ -481,9 +550,9 @@ namespace BlindRumble2
 
                 if (clone.transform.Find("Visuals") && clone.transform.Find("Visuals").Find("Renderer"))
                 {
-                    GameObject.Destroy(clone.transform.GetChild(0).GetChild(0).gameObject);
+                    GameObject.Destroy(clone.transform.GetChild(1).GetChild(0).gameObject);
 
-                    GameObject.Destroy(clone.transform.GetChild(0).gameObject);
+                    GameObject.Destroy(clone.transform.GetChild(1).gameObject);
                 }
 
 
@@ -568,6 +637,11 @@ namespace BlindRumble2
             {
                 if (processedVisuals.Contains(inter)) continue;
 
+                foreach (MeshRenderer mesh in inter.GetComponentsInChildren<MeshRenderer>())
+                {
+                    if (Vector3.Distance(mesh.transform.position, pos) >= 4) continue;
+                }
+
                 foreach (MeshRenderer mesh in inter.GetComponentsInChildren<MeshRenderer>(true))
                 {
                     mesh.material = new Material(sonarMaterial);
@@ -590,6 +664,26 @@ namespace BlindRumble2
                 foreach (TextMeshProUGUI tmp in inter.GetComponentsInChildren<TextMeshProUGUI>(true))
                 {
                     tmp.color = new Color(0.5f, 0.5f, 0.5f, 1f);
+                }
+
+                if (inter.name.Contains("Fruit"))
+                {
+                    GameObject fruit = GameObjects.DDOL.GameInstance.PreInitializable.PoolManager.PoolFruitRUMBLEEnvironmentFruit.GetGameObject();
+                    GameObject flong = GameObjects.DDOL.GameInstance.PreInitializable.PoolManager.PoolFruitLongRUMBLEEnvironmentFruit.GetGameObject();
+                    GameObject ffat = GameObjects.DDOL.GameInstance.PreInitializable.PoolManager.PoolFruitFatRUMBLEEnvironmentFruit.GetGameObject();
+
+                    foreach (GameObject pool in new[] { fruit, flong, ffat })
+                    {
+                        for (int i = 0; i < pool.transform.childCount; i++)
+                        {
+                            var child = pool.transform.GetChild(i);
+
+                            if (Vector3.Distance(child.position, pos) <= 4)
+                            {
+
+                            }
+                        }
+                    }
                 }
                 processedVisuals.Add(inter);
                 inter.active = true;
@@ -628,14 +722,27 @@ namespace BlindRumble2
             }
             while (!slammer.Controller.PlayerMovement.WasGrounded) yield return null;
             RumbleModdingAPI.RMAPI.AudioManager.PlaySound(seismicSlam, slammer.Controller.transform.localPosition);
-            
+
             Collider[] colliders = Physics.OverlapSphere(slammer.Controller.transform.localPosition, 50f);
             foreach (Collider col in colliders)
             {
                 if (col.GetComponent<Structure>() != null) structures.Add(col.GetComponent<Structure>());
             }
             loggerInstance.Msg(structures.Count);
-            CreateSnapshot(null, structures);
+            MelonCoroutines.Start(CreateSnapshot(null, structures);
+        }
+
+        public static void Criterion()
+        {
+            if (matchFound)
+            {
+                int stepIndex = GameObjects.Gym.INTERACTABLES.MatchConsole.MatchmakingSettings.InteractionSliderHorizontalGrip.Sliderhandle.GetGameObject().GetComponent<InteractionSlider>().stepCount;
+                if (stepIndex == 3) reqFufilled = true;
+                else reqFufilled = false;
+
+                if (Calls.Mods.doesOpponentHaveMod(BuildInfo.ModName, BuildInfo.ModVersion, false)) reqFufilled = true;
+                else reqFufilled = false;
+            }
         }
 
         #endregion
@@ -662,11 +769,9 @@ namespace BlindRumble2
 
         public override void OnEvent(List<Il2CppSystem.Object> data)
         {
-            if (CurrentSceneName == "Park") return;
+            if (CurrentSceneName is not "Map0" or "Map1") return;
             EIRing = data[0].ToString() == "True";
             EIPit = data[1].ToString() == "True";
-
-
         }
         #endregion
     }
